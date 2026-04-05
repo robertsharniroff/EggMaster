@@ -2,7 +2,6 @@ name: Build & Release EXE
 
 permissions:
   contents: write
-  releases: write
 
 on:
   push:
@@ -13,42 +12,34 @@ on:
       version:
         description: 'Версия релиза (например 1.0.0)'
         required: true
-        default: '2.2.8'
+        default: '1.0.0'
 
 jobs:
   build-and-release:
     runs-on: windows-latest
     
     steps:
-      # 1. Код
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      # 3. ВСЕ зависимости + PyInstaller ← ВОТ ИСПРАВЛЕНИЕ!
       - name: Install ALL dependencies
         run: |
           python -m pip install --upgrade pip
-          
-          # Зависимости проекта
           pip install numpy
-          pip install opencv-python-headless    # headless — без GUI, меньше размер
+          pip install opencv-python-headless
           pip install scipy
           pip install scikit-image
           pip install trimesh
           pip install fastapi
           pip install uvicorn[standard]
-          pip install python-multipart           # нужен для FastAPI UploadFile
-          
-          # PyInstaller
+          pip install python-multipart
           pip install pyinstaller
 
-      # 4. Сборка С hidden-imports ← ТОЖЕ ВАЖНО!
       - name: Build EXE
         run: |
           pyinstaller --onefile ^
@@ -63,16 +54,11 @@ jobs:
             --hidden-import=trimesh ^
             --hidden-import=fastapi ^
             --hidden-import=uvicorn ^
-            --hidden-import=uvicorn.logging ^
-            --hidden-import=uvicorn.loops ^
-            --hidden-import=uvicorn.protocols ^
-            --hidden-import=multipart ^
             --collect-all cv2 ^
             --collect-all skimage ^
             egg_stamp_gen.py
         shell: cmd
 
-      # 5. Версия
       - name: Get version
         id: get_version
         shell: bash
@@ -83,7 +69,6 @@ jobs:
             echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           fi
 
-      # 6. Релиз
       - name: Create Release & Upload EXE
         uses: softprops/action-gh-release@v2
         with:
@@ -97,8 +82,7 @@ jobs:
             
             ### Как использовать:
             1. Скачать egg_stamp_gen.exe
-            2. Запустить (появится консоль)
-            3. Открыть http://127.0.0.1:8000 в браузере
+            2. Запустить → открыть http://127.0.0.1:8000
             
             ---
             *Собрано автоматически via GitHub Actions*
